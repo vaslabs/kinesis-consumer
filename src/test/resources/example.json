@@ -1,0 +1,20 @@
+{
+  "streams": [
+    {
+      "stream_name": "one"
+    },
+    {
+      "stream_name": "two",
+      "role_arn": "role-for-two"
+    },
+    {
+      "stream_name": "three",
+      "region": "us-east-1"
+    },
+    {
+      "stream_name": "four",
+      "region": "us-west-1",
+      "role_arn": "role-for-four"
+    }
+  ]
+}
