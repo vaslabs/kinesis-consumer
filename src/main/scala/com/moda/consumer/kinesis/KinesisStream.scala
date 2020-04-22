@@ -1,19 +1,20 @@
 package com.moda.consumer.kinesis
 
-import cats.effect.{ ConcurrentEffect, ContextShift, Timer }
+import cats.effect.{ConcurrentEffect, ContextShift, Timer}
 import cats.implicits._
 import com.moda.consumer.kinesis.KinesisConsumer.DefaultKinesisConsumer
-import com.moda.consumer.{ kinesis, StreamConfig }
+import com.moda.consumer.{StreamConfig, kinesis}
 import fs2.Stream
-import fs2.aws.kinesis.{ KinesisCheckpointSettings, KinesisConsumerSettings }
+import fs2.aws.kinesis.{KinesisCheckpointSettings, KinesisConsumerSettings}
 import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
-import software.amazon.awssdk.auth.credentials.{ AwsCredentialsProvider, DefaultCredentialsProvider }
+import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest
+import software.amazon.kinesis.common.InitialPositionInStream
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.concurrent.duration._
@@ -34,7 +35,8 @@ trait KinesisStream {
                                   streamName = streamConfig.streamName,
                                   appName = sessionName,
                                   maxConcurrency = Int.MaxValue,
-                                  bufferSize = 50000
+                                  bufferSize = 50000,
+                                  initialPositionInStream = Left(InitialPositionInStream.TRIM_HORIZON)
                                 ).liftTo[F]
     } yield {
       new kinesis.RecordProcessor[F](
