@@ -1,13 +1,13 @@
 package com.moda.consumer.kinesis
 
-import cats.effect.{ConcurrentEffect, ContextShift, Timer}
+import cats.effect.{ ConcurrentEffect, ContextShift, Timer }
 import cats.implicits._
+import com.moda.consumer.StreamConfig
 import com.moda.consumer.kinesis.KinesisConsumer.DefaultKinesisConsumer
-import com.moda.consumer.{StreamConfig, kinesis}
 import fs2.Stream
-import fs2.aws.kinesis.{KinesisCheckpointSettings, KinesisConsumerSettings}
+import fs2.aws.kinesis.{ KinesisCheckpointSettings, KinesisConsumerSettings }
 import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
-import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.{ AwsCredentialsProvider, DefaultCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
@@ -24,7 +24,8 @@ trait KinesisStream {
   def createStream[F[_]: ConcurrentEffect: ContextShift: Timer](
     appName: String,
     sts: StsClient,
-    streamConfig: StreamConfig
+    streamConfig: StreamConfig,
+    recordProcessor: RecordProcessor
   )(implicit logger: SelfAwareStructuredLogger[F]): F[Stream[F, KinesisClientRecord]] =
     for {
       kinesisCheckpointSettings <- KinesisCheckpointSettings(Int.MaxValue, 10.seconds).liftTo[F]
@@ -38,15 +39,15 @@ trait KinesisStream {
                                   bufferSize = 50000,
                                   initialPositionInStream = Left(InitialPositionInStream.TRIM_HORIZON)
                                 ).liftTo[F]
+      kinesisStream = new DefaultKinesisConsumer[F](
+        kinesisConsumerSettings,
+        kinesisCheckpointSettings,
+        createKinesisClient(kinesisConsumerSettings, sts, sessionName, streamConfig)
+      )
     } yield {
-      new kinesis.RecordProcessor[F](
-        streamConfig.streamName,
-        new DefaultKinesisConsumer[F](
-          kinesisConsumerSettings,
-          kinesisCheckpointSettings,
-          createKinesisClient(kinesisConsumerSettings, sts, sessionName, streamConfig)
-        )
-      ).createStream
+      kinesisStream.mkStream
+        .through(recordProcessor.processEvents(streamConfig.streamName))
+        .through(kinesisStream.mkCheckpointer)
     }
 
   private[this] def createKinesisClient(
