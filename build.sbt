@@ -16,9 +16,7 @@ libraryDependencies ++= Seq(
   "io.laserdisc"      %% "fs2-aws-testkit"                 % "2.28.36" % Test excludeAll ("commons-logging", "commons-logging"),
   "io.chrisdavenport" %% "log4cats-slf4j"                  % "1.0.1",
   "ch.qos.logback"    % "logback-classic"                  % "1.2.3",
-  "com.github.scopt"  %% "scopt"                           % "3.7.1",
-  "com.dimafeng"      %% "testcontainers-scala"            % "0.35.2" % "test",
-  "com.dimafeng"      %% "testcontainers-scala-localstack" % "0.35.2" % "test"
+  "com.github.scopt"  %% "scopt"                           % "3.7.1"
 )
 
 val commonSettings = Seq(
@@ -40,15 +38,11 @@ val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .enablePlugins(BuildInfoPlugin, JavaAppPackaging, SbtGithubReleasePlugin)
+  .enablePlugins(BuildInfoPlugin, JavaAppPackaging)
   .settings(commonSettings)
   .settings(
     buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.moda.consumer",
-    ghreleaseAssets  := Seq((packageBin in Universal).value),
-    ghreleaseNotes := { tag =>
-      s"""See CHANGELOG [$tag](../master/CHANGELOG.md#${tag.replaceAll("[v.]", "")}) for details."""
-    },
     addCommandAlias("format", ";scalafmt;test:scalafmt;scalafmtSbt"),
     addCommandAlias("checkFormat", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck"),
     addCommandAlias("build", ";checkFormat;clean;compile;test")
